@@ -1,0 +1,27 @@
+    </main>
+    
+    <footer class="bg-dark text-light text-center py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2025 Book Notes App. Built with ❤️ using Node.js & Express</p>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Prevent unwanted back navigation
+        function clearHistory(redirectUrl) {
+            window.history.replaceState(null, null, redirectUrl);
+        }
+        
+        // Navigation helper
+        function goBack(defaultUrl = '/dashboard') {
+            if (document.referrer && !document.referrer.includes('edit') && !document.referrer.includes('add')) {
+                window.history.back();
+            } else {
+                window.location.href = defaultUrl;
+            }
+        }
+    </script>
+</body>
+</html>
