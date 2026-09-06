@@ -146,7 +146,7 @@ book-notes/
 
 
 ## 👨‍💻 Author
-**Sanyam** - *Initial work*
+**Aaditya** - *Initial work*
 
 ## 🙏 Acknowledgments
 
