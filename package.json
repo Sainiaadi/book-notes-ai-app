@@ -1,9 +1,9 @@
 {
   "name": "book_notes_ai_version",
   "version": "1.0.0",
-  "description": "multi-user book notes application with AI features",
+  "description": "Multi-user book notes management system with AI integration — built with Node.js, Express, PostgreSQL, EJS, Gemini AI, and OpenLibrary API",
   "license": "ISC",
-  "author": "sanyam",
+  "author": "Aaditya",
   "main": "app.js",
   "type": "module",
   "scripts": {
