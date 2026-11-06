@@ -26,7 +26,7 @@ Give output in above format only:
 `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.5-flash-lite',
       contents: prompt,
     });
 
@@ -53,7 +53,7 @@ JSON format: [{"title":"","author":"","genre":"","reason":"Short reason"}]`;
 
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.5-flash-lite',
       contents: prompt,
     });
 
@@ -78,14 +78,12 @@ JSON format: [{"title":"","author":"","genre":"","reason":"Short reason"}]`;
 
 // i did not use gemini flash lite here as i want gemini to give actual answer where as flash lite will 
 // guve superficial answer not a good comprehensive answer  
-export async function answerBookQuestion(question, context) {
+export async function answerBookQuestion(question, context, chatHistory = []) {
   console.log(`❓ Gemini STARTED: Q&A for "${context.title}" - Question: "${question}"`);
-    console.time('💬 Gemini Q&A');
-
+  console.time('💬 Gemini Q&A');
 
   try {
-    const prompt = `
-You are an intelligent reading assistant with comprehensive knowledge of books and literature. You help users by combining their personal reading experience with general literary knowledge.
+    const systemPrompt = `You are an intelligent reading assistant with comprehensive knowledge of books and literature. You help users by combining their personal reading experience with general literary knowledge.
 
 📚 BOOK INFORMATION:
 Title: "${context.title}" by ${context.author}
@@ -94,28 +92,45 @@ User's Rating: ${context.rating}/5 stars
 📝 USER'S PERSONAL NOTES:
 ${context.notes || "No personal notes available for this book."}
 
-❓ USER'S QUESTION: ${question}
-
 📋 RESPONSE GUIDELINES:
 1. **Use Your Full Knowledge**: Draw from your comprehensive knowledge about this book, its author, themes, literary significance, etc.
 2. **Incorporate User Context**: When relevant, reference the user's personal notes and their rating/experience
 3. **Provide Rich Answers**: Give detailed, informative responses that go beyond just the provided data
-4. **Be Comcise in 3 4 lines**: For questions about authors, themes, historical context, etc., use your full literary knowledge
+4. **Be Concise in 3-4 lines**: Keep answers focused and concise, ideally 3-4 lines
 5. **Connect Personal & General**: Show how the user's experience relates to the broader understanding of the book
+6. **Be Conversational**: Remember the conversation context. If the user asks follow-up questions, reference earlier exchanges naturally.
 
 EXAMPLES OF GOOD RESPONSES:
 - Author questions: Provide full biographical info, other works, writing style, plus how it relates to user's notes
 - Theme questions: Explain literary themes comprehensively, then connect to user's specific observations
-- Character questions: Full character analysis plus user's personal insights
+- Character questions: Full character analysis plus user's personal insights`;
 
-Please provide a comprehensive, knowledgeable answer that enriches the user's understanding:
-`;
+    // Build the multi-turn conversation contents array
+    // Gemini API expects contents as an array of { role, parts: [{ text }] }
+    const contents = [];
 
+    // Add previous chat history for conversational context
+    for (const msg of chatHistory) {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.message }],
+      });
+    }
+
+    // Add the current question
+    contents.push({
+      role: 'user',
+      parts: [{ text: question }],
+    });
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt,
+      contents: contents,
+      config: {
+        systemInstruction: systemPrompt,
+      },
     });
+
     console.timeEnd('💬 Gemini Q&A');
     console.log(` ✅ Gemini ENDED`);
     return response.text.trim();

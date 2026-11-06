@@ -1,5 +1,5 @@
 import express from "express";
-import { handleBookQA } from "../controllers/qaController.js";
+import { handleBookQA, getChatHistory } from "../controllers/qaController.js";
 
 const router = express.Router();
 
@@ -12,5 +12,6 @@ function requireAuth(req, res, next) {
 }
 
 router.post("/book/:id", requireAuth, handleBookQA);
+router.get("/history/:id", requireAuth, getChatHistory);
 
 export default router;

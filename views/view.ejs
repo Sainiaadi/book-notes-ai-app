@@ -28,6 +28,7 @@
     />
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/homestyle.css" />
+    <link rel="stylesheet" href="/viewstyle.css" />
   </head>
   <body>
     <!-- Navbar remains the same -->
@@ -102,86 +103,167 @@
       </div>
     </main>
 
-    <div class="card mt-4">
+    <div class="card mt-4 chat-card">
       <div class="card-header bg-info text-white">
         <h5 class="mb-0">
-          <i class="fas fa-question-circle me-2"></i>
-          Ask AI About "<%= title %>"
+          <i class="fas fa-robot me-2"></i>
+          AI Chat About "<%= title %>"
         </h5>
       </div>
 
-        <form id="qaForm">
-          <div class="mb-3">
-            <input
-              type="text"
-              class="form-control"
-              id="qaQuestion"
-              placeholder="Ask anything about this book or your notes..."
-              required
-            />
-          </div>
-          <button type="submit" class="btn btn-info">
-            <i class="fas fa-robot me-1"></i>
-            Ask AI
-          </button>
-        </form>
+      <div class="card-body chat-body">
+        <!-- Chat messages container -->
+        <div id="chatMessages" class="chat-messages">
+          <!-- Messages will be dynamically inserted here -->
+        </div>
 
-        <div id="qaAnswer" class="mt-3" style="display: none">
-          <div class="alert alert-light border">
-            <div id="qaAnswerContent"></div>
+        <!-- Typing indicator -->
+        <div id="chatTyping" class="chat-typing" style="display: none">
+          <div class="chat-message ai">
+            <div class="chat-bubble ai-bubble">
+              <i class="fas fa-robot me-2"></i>
+              <span class="typing-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </span>
+            </div>
           </div>
         </div>
 
-        <div id="qaLoading" class="mt-3" style="display: none">
-          <div class="alert alert-info">
-            <i class="fas fa-spinner fa-spin me-2"></i>
-            AI is analyzing the book and your notes...
-          </div>
+        <!-- Chat input -->
+        <div class="chat-input-area">
+          <form id="chatForm" class="chat-form">
+            <input
+              type="text"
+              class="form-control chat-input"
+              id="chatInput"
+              placeholder="Ask anything about this book or your notes..."
+              autocomplete="off"
+              required
+            />
+            <button type="submit" class="btn btn-info chat-send-btn">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </form>
         </div>
       </div>
     </div>
 
     <script>
-      document
-        .getElementById("qaForm")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
+      const bookId = "<%= bookid %>";
+      const bookTitle = "<%= title %>";
+      let isLoading = false;
 
-          const question = document.getElementById("qaQuestion").value;
-          const answerDiv = document.getElementById("qaAnswer");
-          const loadingDiv = document.getElementById("qaLoading");
-          const answerContent = document.getElementById("qaAnswerContent");
+      // ---- Chat UI Logic ----
 
-          // Show loading, hide answer
-          answerDiv.style.display = "none";
-          loadingDiv.style.display = "block";
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
 
-          try {
-            const response = await fetch("/qa/book/<%= bookid %>", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ question }),
+      function formatMessage(text) {
+        return escapeHtml(text).replace(/\n/g, "<br>");
+      }
+
+      function appendMessage(role, message) {
+        const chatMessages = document.getElementById("chatMessages");
+        const wrapper = document.createElement("div");
+        wrapper.className = "chat-message " + (role === "user" ? "user" : "ai");
+
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble " + (role === "user" ? "user-bubble" : "ai-bubble");
+
+        if (role === "ai") {
+          const icon = document.createElement("i");
+          icon.className = "fas fa-robot me-2";
+          bubble.appendChild(icon);
+        }
+
+        const span = document.createElement("span");
+        span.innerHTML = formatMessage(message);
+        bubble.appendChild(span);
+
+        wrapper.appendChild(bubble);
+        chatMessages.appendChild(wrapper);
+        scrollToBottom();
+      }
+
+      function scrollToBottom() {
+        const chatMessages = document.getElementById("chatMessages");
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Load previous chat history on page load
+      async function loadChatHistory() {
+        try {
+          const response = await fetch(`/qa/history/${bookId}`);
+          const data = await response.json();
+
+          if (data.success && data.history && data.history.length > 0) {
+            data.history.forEach((msg) => {
+              appendMessage(msg.role, msg.message);
             });
-
-            const data = await response.json();
-
-            loadingDiv.style.display = "none";
-
-            if (data.success) {
-              answerContent.innerHTML = data.answer.replace(/\n/g, "<br>");
-              answerDiv.style.display = "block";
-            } else {
-              answerContent.textContent =
-                data.error || "Sorry, I could not answer that question.";
-              answerDiv.style.display = "block";
-            }
-          } catch (error) {
-            loadingDiv.style.display = "none";
-            answerContent.textContent =
-              "Error: Could not connect to AI service.";
-            answerDiv.style.display = "block";
+          } else {
+            // Show welcome message if no history
+            appendMessage("ai", `Hi! I'm your AI reading assistant. Ask me anything about "${bookTitle}" — its themes, characters, author, or your personal notes.`);
           }
-        });
+        } catch (error) {
+          console.error("Error loading chat history:", error);
+          appendMessage("ai", `Hi! I'm your AI reading assistant. Ask me anything about "${bookTitle}".`);
+        }
+      }
+
+      // Handle chat form submission
+      document.getElementById("chatForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        if (isLoading) return;
+
+        const input = document.getElementById("chatInput");
+        const question = input.value.trim();
+
+        if (!question) return;
+
+        // Show user message
+        appendMessage("user", question);
+
+        // Clear input
+        input.value = "";
+
+        // Show typing indicator
+        isLoading = true;
+        document.getElementById("chatTyping").style.display = "block";
+        scrollToBottom();
+
+        try {
+          const response = await fetch(`/qa/book/${bookId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question }),
+          });
+
+          const data = await response.json();
+
+          // Hide typing indicator
+          document.getElementById("chatTyping").style.display = "none";
+          isLoading = false;
+
+          if (data.success) {
+            appendMessage("ai", data.answer);
+          } else {
+            appendMessage("ai", data.error || "Sorry, I could not answer that question.");
+          }
+        } catch (error) {
+          document.getElementById("chatTyping").style.display = "none";
+          isLoading = false;
+          appendMessage("ai", "Error: Could not connect to AI service.");
+        }
+      });
+
+      // Load history when page loads
+      loadChatHistory();
     </script>
 
     <!-- Footer remains the same -->
